@@ -13,14 +13,7 @@ app.use(express.static('build'))
 app.use(morgan('tiny'))
 app.use(cors())
 
-const errorHandler = (error, req,res,next) => {
-    console.log(error.message)
-    if(error.name === 'CastError'){
-        return res.status(400).send({error: 'malformatted id'})
-    }
-    next(error)
-}
-app.use(errorHandler)
+
 
 
 
@@ -33,18 +26,9 @@ app.get('/api/people', (req,res) =>{
     })
 })
 
-app.post('/api/people',(req,res)=>{
+app.post('/api/people',(req,res,next)=>{
     const body = req.body
 
-    if(!body.name) {
-        return res.status(400).json({
-            error:'name missing'
-        })
-    } else if(!body.number) {
-        return res.status(400).json({
-            error: 'number missing'
-        })
-    }
     const person = new Person( {
         name: body.name,
         number: body.number,
@@ -53,6 +37,7 @@ app.post('/api/people',(req,res)=>{
     person.save().then(savedPerson =>{
         res.json(savedPerson)
     })
+    .catch(error => next(error))
     
 })
 
@@ -84,7 +69,18 @@ app.delete('/api/people/:id',(req,res)=>{
      })
      .catch(error=>next(error))
 }) 
-
+const errorHandler = (error, req,res,next) => {
+    console.log(error.message)
+    if(error.name === 'CastError'){
+        return res.status(400).send({error: 'malformatted id'})
+    } else if(error.name==='ValidationError') {
+        return res.status(400).json({error: error.message})
+    } else if(error.name === 'MongoServerError'){
+        return res.status(400).json({error: error.message})
+    }
+    next(error)
+}
+app.use(errorHandler)
 
 
 
